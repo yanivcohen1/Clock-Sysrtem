@@ -8,7 +8,7 @@ namespace HomeWorke.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Manager,Admin")]
+[Authorize]
 public class ReportsController : ControllerBase
 {
     private readonly IAttendanceService _attendanceService;
@@ -17,15 +17,16 @@ public class ReportsController : ControllerBase
         _attendanceService = attendanceService;
 
     /// <summary>
-    /// Returns managerId filter:
+    /// Returns the visibility filter:
     /// - Admin → null (see all employees)
-    /// - Manager → their own ID (see only subordinates)
+    /// - Manager → their own ID (see themselves + all subordinates recursively)
+    /// - Employee → their own ID (see only themselves)
     /// </summary>
     private int? GetManagerFilter()
     {
         var role = User.FindFirst(ClaimTypes.Role)?.Value;
         if (role == "Admin") return null;
-        return GetEmployeeId();
+        return GetEmployeeId(); // Manager or Employee — sees themselves + their tree
     }
 
     [HttpGet("daily")]

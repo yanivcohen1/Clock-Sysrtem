@@ -91,7 +91,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/reports"
         element={
-          <ProtectedRoute roles={['Manager', 'Admin']}>
+          <ProtectedRoute>
             <Layout><ReportsPage /></Layout>
           </ProtectedRoute>
         }

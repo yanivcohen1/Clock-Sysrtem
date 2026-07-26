@@ -22,9 +22,7 @@ export const Layout: React.FC<Props> = ({ children }) => {
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/attendance', label: 'Attendance', icon: Clock },
     { path: '/history', label: 'History', icon: History },
-    ...(role === 'Manager' || role === 'Admin'
-      ? [{ path: '/reports', label: 'Reports', icon: BarChart3 }]
-      : []),
+    { path: '/reports', label: 'Reports', icon: BarChart3 },
     ...(role === 'Admin'
       ? [{ path: '/admin', label: 'Admin', icon: Shield }]
       : []),

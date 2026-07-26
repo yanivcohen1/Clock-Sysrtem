@@ -374,19 +374,19 @@ public class AttendanceService : IAttendanceService
     }
 
     /// <summary>
-    /// Returns ALL subordinate employee IDs in the management chain below the given manager,
-    /// collected recursively (BFS). Does NOT include the manager themselves.
+    /// Returns ALL employee IDs visible to the given manager/employee:
+    /// includes the person themselves PLUS all subordinates recursively (BFS).
     /// </summary>
-    private async Task<HashSet<int>> GetSubordinateIdsAsync(int managerId)
+    private async Task<HashSet<int>> GetSubordinateIdsAsync(int employeeId)
     {
         var allEmployees = await _db.Employees
             .Where(e => e.IsActive)
             .Select(e => new { e.Id, e.ManagerId })
             .ToListAsync();
 
-        var result = new HashSet<int>();
+        var result = new HashSet<int> { employeeId }; // Include self
         var queue = new Queue<int>();
-        queue.Enqueue(managerId);
+        queue.Enqueue(employeeId);
 
         while (queue.Count > 0)
         {

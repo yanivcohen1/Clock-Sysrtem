@@ -91,7 +91,7 @@ export const ReportsPage: React.FC = () => {
           <BarChart3 className="h-6 w-6 text-primary-600" />
           Reports
         </h1>
-        <p className="text-gray-500 text-sm mt-1">Manager & Admin access only</p>
+        <p className="text-gray-500 text-sm mt-1">Your attendance reports & team overview</p>
       </div>
 
       {/* View tabs */}
