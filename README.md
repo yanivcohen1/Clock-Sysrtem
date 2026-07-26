@@ -104,20 +104,36 @@ Every Clock In / Clock Out operation queries **WorldTimeAPI.org** for the curren
 - Demo: Manager (`manager@homeworke.com`) manages Employee (`demo@homeworke.com`)
 
 ### 📊 Reports (Manager/Admin)
-Four views available:
+Four views with **10 items per page** and ◀ Prev / Page X of Y / Next ▶ controls:
 - **Current Status**: Live view of all employees — who's working right now, with pulse indicator
 - **Daily Report**: All employees' attendance for a specific date
 - **Monthly Report**: Per-employee summary (days worked, absent, late, total hours)
-- **History**: Paginated full attendance log with date range & employee filters
+- **History**: Full attendance log with date range & employee filters
 
 ### 🛡 Admin Panel
-- View all employees with role, department, status, and **manager assignment**
+- View all employees (10 per page) with role, department, status, and **manager assignment**
 - **Add Employee** form with role selection, department, and **Manager dropdown** (required for Employee, optional for Manager)
-- Full audit log with pagination
+- Full audit log (10 per page, ◀ Prev / Page X of Y / Next ▶)
 - Toggle employee active/inactive status
 - Reset employee passwords
 - Delete employees (hard delete with audit log)
 - Adjust attendance records with mandatory reason
+
+### 📄 Pagination
+Every table in the application is paginated with a **uniform page size of 10 items**:
+
+| Feature | Location | Controls |
+|---|---|---|
+| Current Status | Reports | ◀ Prev / Page X of Y / Next ▶ |
+| Daily Report | Reports | ◀ Prev / Page X of Y / Next ▶ |
+| Monthly Report | Reports | ◀ Prev / Page X of Y / Next ▶ |
+| History | Reports | ◀ Prev / Page X of Y / Next ▶ |
+| Employees | Admin Panel | ◀ Prev / Page X of Y / Next ▶ |
+| Audit Log | Admin Panel | ◀ Prev / Page X of Y / Next ▶ |
+| Personal History | My History | ◀ Prev / Page X of Y / Next ▶ |
+
+Backend uses `PaginatedResponse<T>` = `(totalCount, page, pageSize, items)` on all list endpoints.
+Frontend uses a consistent `PAGE_SIZE = 10` constant with matching pagination UI.
 
 ---
 
@@ -200,9 +216,11 @@ HomeWorke/
 - [x] Password reset / forgot password flow
 - [x] Manager-Employee hierarchy with recursive reporting
 - [x] Admin panel: CRUD employees, assign managers, audit log
-- [x] Reports: Current Status, Daily, Monthly, History with pagination & filters
+- [x] Reports: Current Status, Daily, Monthly, History — all with pagination (10/page) & filters
 - [x] Role-based access: Employee / Manager / Admin
-- [x] Demo seed data: 3 accounts (Admin, Manager, Employee)
+- [x] Demo seed data: 3 accounts + 32 attendance records + 55 audit log entries
+- [x] Consistent pagination: ◀ Prev / Page X of Y / Next ▶ on all tables
+- [x] Global page size: 10 items per page across the entire application
 
 ## 🔮 Future Enhancements
 - [ ] Location/geofencing validation for clock-in
