@@ -72,9 +72,11 @@ npm run dev                 # Starts on http://localhost:5173
 
 ### 4. Login
 
-| Role  | Email                  | Password   |
-|-------|------------------------|------------|
-| Admin | admin@homeworke.com    | Admin@123  |
+| Role     | Email                   | Password     |
+|----------|-------------------------|--------------|
+| Admin    | admin@homeworke.com     | Admin@123    |
+| Manager  | manager@homeworke.com   | Manager@123  |
+| Employee | demo@homeworke.com      | Demo@123     |
 
 ---
 
@@ -89,19 +91,32 @@ Every Clock In / Clock Out operation queries **WorldTimeAPI.org** for the curren
 |---|---|
 | **Double Clock-In** | Rejected — must clock out first |
 | **Clock-Out without Clock-In** | Rejected — no open shift found |
-| **Time API failure** | Retries 3x with exponential backoff, then circuit breaker opens for 30s |
+| **Time API failure** | Falls back across 3 sources: timeapi.io → WorldTimeAPI HTTP → WorldTimeAPI HTTPS, 8s timeout each |
 | **Midnight-crossing shifts** | Clock-out date may differ from shift date — handled correctly |
 | **Shifts > 14 hours** | Auto-flagged for admin review with warning |
 | **Admin adjustment** | Full audit trail with old/new values stored as JSON |
 | **Inactive employees** | Cannot log in |
 
+### 🏢 Manager-Employee Hierarchy
+- Each **Employee** and **Manager** can be assigned a parent **Manager**
+- **Recursive reporting**: A manager sees not only direct reports but **all subordinates down the entire chain**
+- **Admin** sees all employees regardless of hierarchy
+- Demo: Manager (`manager@homeworke.com`) manages Employee (`demo@homeworke.com`)
+
 ### 📊 Reports (Manager/Admin)
+Four views available:
+- **Current Status**: Live view of all employees — who's working right now, with pulse indicator
 - **Daily Report**: All employees' attendance for a specific date
 - **Monthly Report**: Per-employee summary (days worked, absent, late, total hours)
+- **History**: Paginated full attendance log with date range & employee filters
 
 ### 🛡 Admin Panel
-- View all employees and their status
+- View all employees with role, department, status, and **manager assignment**
+- **Add Employee** form with role selection, department, and **Manager dropdown** (required for Employee, optional for Manager)
 - Full audit log with pagination
+- Toggle employee active/inactive status
+- Reset employee passwords
+- Delete employees (hard delete with audit log)
 - Adjust attendance records with mandatory reason
 
 ---
@@ -145,32 +160,51 @@ HomeWorke/
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
 | POST | `/api/auth/login` | — | Login, get JWT |
+| POST | `/api/auth/register` | — | Self-registration |
+| POST | `/api/auth/forgot-password` | — | Request password reset |
+| POST | `/api/auth/reset-password` | — | Reset with token |
 | POST | `/api/auth/change-password` | Any | Change password |
 | POST | `/api/attendance/clock-in` | Any | Clock in (Zurich time) |
 | POST | `/api/attendance/clock-out` | Any | Clock out (Zurich time) |
 | GET | `/api/attendance/status` | Any | Current shift status |
 | GET | `/api/attendance/history` | Any | Personal history |
-| GET | `/api/reports/daily` | Manager+ | Daily report |
-| GET | `/api/reports/monthly` | Manager+ | Monthly summary |
+| GET | `/api/reports/daily` | Manager+ | Daily report (filtered by hierarchy) |
+| GET | `/api/reports/monthly` | Manager+ | Monthly summary (filtered by hierarchy) |
+| GET | `/api/reports/current-status` | Manager+ | Live status of all subordinates |
+| GET | `/api/reports/history` | Manager+ | Paginated history with filters |
 | PUT | `/api/admin/adjust-attendance` | Admin | Correct records |
-| GET | `/api/admin/employees` | Admin | List employees |
+| GET | `/api/admin/employees` | Admin | List employees with manager info |
+| POST | `/api/admin/employees` | Admin | Create employee (role + managerId) |
+| PUT | `/api/admin/employees/{id}/toggle-status` | Admin | Activate/deactivate |
+| PUT | `/api/admin/employees/{id}/reset-password` | Admin | Reset password |
+| DELETE | `/api/admin/employees/{id}` | Admin | Delete employee |
 | GET | `/api/admin/audit-log` | Admin | Audit trail |
 
 ---
 
 ## 🧠 Design Decisions
 
-1. **Time API with 5-second cache**: Prevents hammering the external API during rapid requests while staying accurate
-2. **Polly resilience policies**: Retry (3x exponential) + Circuit Breaker (30s) for time API failures
+1. **Multi-source time API with fallback**: timeapi.io → WorldTimeAPI HTTP → WorldTimeAPI HTTPS, each with fresh HttpClient and 8s timeout. 5-second cache prevents API hammering.
+2. **BFS recursive hierarchy**: Manager sees all subordinates at any depth — collected via in-memory BFS for cross-database compatibility.
 3. **JWT with zero clock skew**: Tokens expire exactly at expiry time — no tolerance
 4. **BCrypt password hashing**: Industry-standard adaptive hashing
-5. **Filtered index on open records**: `WHERE ClockOut IS NULL` for fast "find active shift" queries
+5. **Self-referencing FK**: `Employees.ManagerId → Employees.Id` with `ON DELETE RESTRICT`
 6. **Vite proxy in dev**: `/api` requests proxy to backend — no CORS issues in development
 
 ---
 
-## 🔮 Future Enhancements (Not Yet Implemented)
+## ✅ Implemented Features
+- [x] Multi-source external time validation (timeapi.io + WorldTimeAPI)
+- [x] Unlimited daily clock-in/out cycles
+- [x] Self-registration with department selection
+- [x] Password reset / forgot password flow
+- [x] Manager-Employee hierarchy with recursive reporting
+- [x] Admin panel: CRUD employees, assign managers, audit log
+- [x] Reports: Current Status, Daily, Monthly, History with pagination & filters
+- [x] Role-based access: Employee / Manager / Admin
+- [x] Demo seed data: 3 accounts (Admin, Manager, Employee)
 
+## 🔮 Future Enhancements
 - [ ] Location/geofencing validation for clock-in
 - [ ] Email notifications for forgotten clock-outs
 - [ ] Leave request workflow (approve/deny)
