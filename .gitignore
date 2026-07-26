@@ -20,3 +20,5 @@ Thumbs.db
 # IDE
 .idea/
 *.swp
+backend/HomeWorke.Api/HomeWorke.db-wal
+backend/HomeWorke.Api/HomeWorke.db-shm
