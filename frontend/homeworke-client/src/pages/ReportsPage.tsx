@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { attendanceService } from '../services/attendanceService';
-import type { DailyReport, MonthlyReport, CurrentStatusResponse, PaginatedHistory, EmployeeDto } from '../types';
+import type { DailyReport, MonthlyReport, CurrentStatusResponse, PaginatedHistory, EmployeeDto, PaginatedResponse } from '../types';
 import { StatusBadge } from '../components/Common/StatusBadge';
 import { LoadingSpinner } from '../components/Common/LoadingSpinner';
-import { BarChart3, Calendar, Users, TrendingUp, Clock, History, Filter, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { BarChart3, Calendar, Users, TrendingUp, Clock, History, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 type ViewTab = 'daily' | 'monthly' | 'status' | 'history';
+const PAGE_SIZE = 10;
 
 export const ReportsPage: React.FC = () => {
   const [view, setView] = useState<ViewTab>('status');
@@ -14,8 +15,11 @@ export const ReportsPage: React.FC = () => {
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
   const [dailyReport, setDailyReport] = useState<DailyReport | null>(null);
-  const [monthlyReport, setMonthlyReport] = useState<MonthlyReport[]>([]);
+  const [dailyPage, setDailyPage] = useState(1);
+  const [monthlyData, setMonthlyData] = useState<PaginatedResponse<MonthlyReport> | null>(null);
+  const [monthlyPage, setMonthlyPage] = useState(1);
   const [currentStatus, setCurrentStatus] = useState<CurrentStatusResponse | null>(null);
+  const [statusPage, setStatusPage] = useState(1);
   const [historyData, setHistoryData] = useState<PaginatedHistory | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyFrom, setHistoryFrom] = useState('');
@@ -25,23 +29,23 @@ export const ReportsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchDaily = useCallback(async () => {
+  const fetchDaily = useCallback(async (page: number) => {
     setLoading(true); setError('');
-    try { const data = await attendanceService.getDailyReport(date); setDailyReport(data); }
+    try { const data = await attendanceService.getDailyReport(date, page, PAGE_SIZE); setDailyReport(data); }
     catch (err: any) { setError(err.response?.data?.error || 'Failed to load report'); }
     finally { setLoading(false); }
   }, [date]);
 
-  const fetchMonthly = useCallback(async () => {
+  const fetchMonthly = useCallback(async (page: number) => {
     setLoading(true); setError('');
-    try { const data = await attendanceService.getMonthlyReport(year, month); setMonthlyReport(data); }
+    try { const data = await attendanceService.getMonthlyReport(year, month, page, PAGE_SIZE); setMonthlyData(data); }
     catch (err: any) { setError(err.response?.data?.error || 'Failed to load report'); }
     finally { setLoading(false); }
   }, [year, month]);
 
-  const fetchCurrentStatus = useCallback(async () => {
+  const fetchCurrentStatus = useCallback(async (page: number) => {
     setLoading(true); setError('');
-    try { const data = await attendanceService.getCurrentStatus(); setCurrentStatus(data); }
+    try { const data = await attendanceService.getCurrentStatus(page, PAGE_SIZE); setCurrentStatus(data); }
     catch (err: any) { setError(err.response?.data?.error || 'Failed to load status'); }
     finally { setLoading(false); }
   }, []);
@@ -54,7 +58,7 @@ export const ReportsPage: React.FC = () => {
         from: historyFrom || undefined,
         to: historyTo || undefined,
         page,
-        pageSize: 20,
+        pageSize: PAGE_SIZE,
       });
       setHistoryData(data);
     } catch (err: any) { setError(err.response?.data?.error || 'Failed to load history'); }
@@ -62,16 +66,28 @@ export const ReportsPage: React.FC = () => {
   }, [historyEmployeeId, historyFrom, historyTo]);
 
   const fetchEmployees = useCallback(async () => {
-    try { const data = await attendanceService.getEmployees(); setEmployees(data); }
+    try { const d = await attendanceService.getEmployees(1, 100); setEmployees(d.items); }
     catch { /* non-critical */ }
   }, []);
 
   useEffect(() => {
-    if (view === 'daily') fetchDaily();
-    else if (view === 'monthly') fetchMonthly();
-    else if (view === 'status') fetchCurrentStatus();
+    if (view === 'daily') fetchDaily(dailyPage);
+    else if (view === 'monthly') fetchMonthly(monthlyPage);
+    else if (view === 'status') fetchCurrentStatus(statusPage);
     else if (view === 'history') { fetchHistory(historyPage); fetchEmployees(); }
   }, [view, date, month, year]);
+
+  useEffect(() => {
+    if (view === 'daily') fetchDaily(dailyPage);
+  }, [dailyPage]);
+
+  useEffect(() => {
+    if (view === 'monthly') fetchMonthly(monthlyPage);
+  }, [monthlyPage]);
+
+  useEffect(() => {
+    if (view === 'status') fetchCurrentStatus(statusPage);
+  }, [statusPage]);
 
   useEffect(() => {
     if (view === 'history') fetchHistory(historyPage);
@@ -99,7 +115,7 @@ export const ReportsPage: React.FC = () => {
         {tabs.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
-            onClick={() => { setView(key); setHistoryPage(1); }}
+            onClick={() => { setView(key); setDailyPage(1); setMonthlyPage(1); setStatusPage(1); setHistoryPage(1); }}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
               view === key
                 ? 'bg-white text-primary-700 shadow-sm'
@@ -122,7 +138,7 @@ export const ReportsPage: React.FC = () => {
       {!loading && view === 'status' && currentStatus && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <StatCard icon={Users} label="Total Employees" value={currentStatus.totalEmployees} color="blue" />
+            <StatCard icon={Users} label="Total Employees" value={currentStatus.totalCount} color="blue" />
             <StatCard icon={TrendingUp} label="Working Now" value={currentStatus.workingNow} color="green" />
             <StatCard icon={Calendar} label="Not Working" value={currentStatus.notWorking} color="red" />
           </div>
@@ -130,7 +146,7 @@ export const ReportsPage: React.FC = () => {
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
               <h3 className="font-semibold text-gray-900">All Employees — Right Now</h3>
-              <p className="text-sm text-gray-500">{currentStatus.workingNow} of {currentStatus.totalEmployees} currently clocked in</p>
+              <p className="text-sm text-gray-500">{currentStatus.workingNow} of {currentStatus.totalCount} currently clocked in</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -174,6 +190,15 @@ export const ReportsPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            {currentStatus.totalCount > PAGE_SIZE && (
+              <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                <span className="text-sm text-gray-500">Page {currentStatus.page} of {Math.ceil(currentStatus.totalCount / PAGE_SIZE)}</span>
+                <div className="flex gap-2">
+                  <button onClick={() => setStatusPage(p => Math.max(1, p - 1))} disabled={currentStatus.page <= 1} className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40"><ChevronLeft className="h-4 w-4" />Prev</button>
+                  <button onClick={() => setStatusPage(p => p + 1)} disabled={currentStatus.page * PAGE_SIZE >= currentStatus.totalCount} className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40">Next<ChevronRight className="h-4 w-4" /></button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -194,7 +219,7 @@ export const ReportsPage: React.FC = () => {
           {dailyReport && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatCard icon={Users} label="Total Employees" value={dailyReport.totalEmployees} color="blue" />
+                <StatCard icon={Users} label="Total Employees" value={dailyReport.totalCount} color="blue" />
                 <StatCard icon={TrendingUp} label="Working Now" value={dailyReport.presentCount} color="green" />
                 <StatCard icon={Calendar} label="Not Clocked In" value={dailyReport.absentCount} color="red" />
                 <StatCard icon={TrendingUp} label="Completed Shifts" value={dailyReport.completedCount} color="yellow" />
@@ -236,6 +261,15 @@ export const ReportsPage: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
+                {dailyReport.totalCount > PAGE_SIZE && (
+                  <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Page {dailyReport.page} of {Math.ceil(dailyReport.totalCount / PAGE_SIZE)}</span>
+                    <div className="flex gap-2">
+                      <button onClick={() => setDailyPage(p => Math.max(1, p - 1))} disabled={dailyReport.page <= 1} className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40"><ChevronLeft className="h-4 w-4" />Prev</button>
+                      <button onClick={() => setDailyPage(p => p + 1)} disabled={dailyReport.page * PAGE_SIZE >= dailyReport.totalCount} className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40">Next<ChevronRight className="h-4 w-4" /></button>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -288,7 +322,7 @@ export const ReportsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {monthlyReport.map((r, i) => (
+                  {monthlyData?.items.map((r, i) => (
                     <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
                       <td className="px-4 py-2.5 font-medium">{r.employeeName}</td>
                       <td className="px-4 py-2.5 text-center">{r.daysWorked}</td>
@@ -298,7 +332,7 @@ export const ReportsPage: React.FC = () => {
                       <td className="px-4 py-2.5 text-center">{r.averageDailyHours}h</td>
                     </tr>
                   ))}
-                  {monthlyReport.length === 0 && (
+                  {monthlyData && monthlyData.items.length === 0 && (
                     <tr>
                       <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
                         No data for this month

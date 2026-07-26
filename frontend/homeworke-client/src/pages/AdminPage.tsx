@@ -3,15 +3,19 @@ import { createPortal } from 'react-dom';
 import { attendanceService } from '../services/attendanceService';
 import type { EmployeeDto, AuditLogEntry } from '../types';
 import { LoadingSpinner } from '../components/Common/LoadingSpinner';
-import { Shield, Users, FileText, UserPlus, ToggleLeft, Trash2, Key, X, Plus } from 'lucide-react';
+import { Shield, Users, FileText, UserPlus, ToggleLeft, Trash2, Key, X, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 export const AdminPage: React.FC = () => {
   const [tab, setTab] = useState<'employees' | 'audit'>('employees');
   const [employees, setEmployees] = useState<EmployeeDto[]>([]);
+  const [empTotal, setEmpTotal] = useState(0);
+  const [empPage, setEmpPage] = useState(1);
+  const pageSize = 10;
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [auditTotal, setAuditTotal] = useState(0);
   const [auditPage, setAuditPage] = useState(1);
+  const [auditPageSize, setAuditPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [resetPwdId, setResetPwdId] = useState<number | null>(null);
@@ -21,11 +25,14 @@ export const AdminPage: React.FC = () => {
   const fetchData = async () => {
     setLoading(true); setActionError('');
     try {
-      if (tab === 'employees') setEmployees(await attendanceService.getEmployees());
-      else { const d = await attendanceService.getAuditLog(auditPage); setAuditLogs(d.logs); setAuditTotal(d.total); }
+      if (tab === 'employees') {
+        const d = await attendanceService.getEmployees(empPage, pageSize);
+        setEmployees(d.items); setEmpTotal(d.totalCount);
+      }
+      else { const d = await attendanceService.getAuditLog(auditPage); setAuditLogs(d.logs); setAuditTotal(d.total); setAuditPageSize(d.pageSize); }
     } catch { /* handled */ } finally { setLoading(false); }
   };
-  useEffect(() => { fetchData(); }, [tab, auditPage]);
+  useEffect(() => { fetchData(); }, [tab, auditPage, empPage]);
 
   const handleToggleStatus = async (emp: EmployeeDto) => {
     if (!confirm(`${emp.isActive ? 'Deactivate' : 'Activate'} ${emp.fullName}?`)) return;
@@ -115,6 +122,15 @@ export const AdminPage: React.FC = () => {
               </div></td>
             </tr>))}
           </tbody></table></div>
+          {empTotal > pageSize && (
+            <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+              <span className="text-sm text-gray-500">Page {empPage} of {Math.ceil(empTotal / pageSize)} ({empTotal} total)</span>
+              <div className="flex gap-2">
+                <button onClick={() => setEmpPage(p => Math.max(1, p - 1))} disabled={empPage <= 1} className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40"><ChevronLeft className="h-4 w-4" />Prev</button>
+                <button onClick={() => setEmpPage(p => p + 1)} disabled={empPage * pageSize >= empTotal} className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40">Next<ChevronRight className="h-4 w-4" /></button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -131,7 +147,7 @@ export const AdminPage: React.FC = () => {
             <td className="px-4 py-3">{log.newValue && (<details className="text-xs"><summary className="text-primary-600 cursor-pointer hover:underline">View</summary><pre className="mt-1 p-2 bg-gray-50 rounded text-xs overflow-x-auto max-w-xs">{JSON.stringify(JSON.parse(log.newValue), null, 2)}</pre></details>)}</td>
           </tr>))}
         </tbody></table></div>
-        {auditTotal > 50 && (<div className="px-4 py-3 border-t flex justify-between"><span className="text-sm text-gray-500">{auditTotal} total</span><div className="flex gap-2"><button onClick={() => setAuditPage(Math.max(1,auditPage-1))} disabled={auditPage===1} className="px-3 py-1 text-sm border rounded disabled:opacity-50">Prev</button><button onClick={() => setAuditPage(auditPage+1)} disabled={auditPage*50>=auditTotal} className="px-3 py-1 text-sm border rounded disabled:opacity-50">Next</button></div></div>)}
+        {auditTotal > auditPageSize && (<div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between"><span className="text-sm text-gray-500">Page {auditPage} of {Math.ceil(auditTotal / auditPageSize)}</span><div className="flex gap-2"><button onClick={() => setAuditPage(p => Math.max(1, p - 1))} disabled={auditPage <= 1} className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"><ChevronLeft className="h-4 w-4" />Prev</button><button onClick={() => setAuditPage(p => p + 1)} disabled={auditPage * auditPageSize >= auditTotal} className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Next<ChevronRight className="h-4 w-4" /></button></div></div>)}
         </div>
       )}
     </div>

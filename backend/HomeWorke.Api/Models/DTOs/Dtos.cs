@@ -119,3 +119,12 @@ public record PaginatedHistoryResponse(
     int PageSize,
     List<AttendanceResponse> Records
 );
+
+// ── Generic pagination wrapper ─────────────────
+
+public record PaginatedResponse<T>(
+    int TotalCount,
+    int Page,
+    int PageSize,
+    List<T> Items
+);

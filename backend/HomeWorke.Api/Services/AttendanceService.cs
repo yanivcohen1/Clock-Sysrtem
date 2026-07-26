@@ -11,7 +11,7 @@ public interface IAttendanceService
     Task<AttendanceResponse> ClockInAsync(int employeeId, ClockRequest request);
     Task<AttendanceResponse> ClockOutAsync(int employeeId, ClockRequest request);
     Task<AttendanceResponse?> GetCurrentStatusAsync(int employeeId);
-    Task<List<AttendanceResponse>> GetHistoryAsync(int employeeId, DateTime? from, DateTime? to);
+    Task<List<AttendanceResponse>> GetHistoryAsync(int employeeId, DateTime? from, DateTime? to, int page = 1, int pageSize = 10);
     Task<List<AttendanceSummaryResponse>> GetDailyReportAsync(DateTime date, int? managerId = null);
     Task<List<MonthlyReportResponse>> GetMonthlyReportAsync(int year, int month, int? managerId = null);
     Task<AttendanceResponse> AdminAdjustAsync(int adminId, AdminAdjustmentRequest request);
@@ -140,8 +140,12 @@ public class AttendanceService : IAttendanceService
     }
 
     public async Task<List<AttendanceResponse>> GetHistoryAsync(
-        int employeeId, DateTime? from, DateTime? to)
+        int employeeId, DateTime? from, DateTime? to, int page = 1, int pageSize = 10)
     {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+        if (pageSize > 100) pageSize = 100;
+
         var query = _db.AttendanceRecords
             .Include(r => r.Employee)
             .Where(r => r.EmployeeId == employeeId);
@@ -154,7 +158,8 @@ public class AttendanceService : IAttendanceService
         var records = await query
             .OrderByDescending(r => r.ShiftDate)
             .ThenByDescending(r => r.ClockIn)
-            .Take(100)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
 
         return records.Select(r => MapToResponse(r, r.Employee)).ToList();

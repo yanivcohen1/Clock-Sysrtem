@@ -32,14 +32,25 @@ public class AdminController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>List all employees.</summary>
+    /// <summary>List all employees with pagination.</summary>
     [HttpGet("employees")]
-    public async Task<IActionResult> GetEmployees()
+    public async Task<IActionResult> GetEmployees(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var employees = await _db.Employees
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+        if (pageSize > 100) pageSize = 100;
+
+        var query = _db.Employees
             .Include(e => e.Department)
             .Include(e => e.Manager)
-            .OrderBy(e => e.LastName)
+            .OrderBy(e => e.LastName);
+
+        var totalCount = await query.CountAsync();
+
+        var employees = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(e => new EmployeeDto(
                 e.Id,
                 e.EmployeeCode,
@@ -54,13 +65,13 @@ public class AdminController : ControllerBase
             ))
             .ToListAsync();
 
-        return Ok(employees);
+        return Ok(new PaginatedResponse<EmployeeDto>(totalCount, page, pageSize, employees));
     }
 
     /// <summary>Get audit log for transparency.</summary>
     [HttpGet("audit-log")]
     public async Task<IActionResult> GetAuditLog(
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         var logs = await _db.AuditLogs
             .OrderByDescending(l => l.Timestamp)

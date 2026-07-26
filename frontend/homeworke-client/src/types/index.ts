@@ -59,7 +59,9 @@ export interface AttendanceSummary {
 
 export interface DailyReport {
   date: string;
-  totalEmployees: number;
+  totalCount: number;
+  page: number;
+  pageSize: number;
   presentCount: number;
   absentCount: number;
   completedCount: number;
@@ -113,10 +115,19 @@ export interface EmployeeStatus {
 }
 
 export interface CurrentStatusResponse {
-  totalEmployees: number;
+  totalCount: number;
+  page: number;
+  pageSize: number;
   workingNow: number;
   notWorking: number;
   employees: EmployeeStatus[];
+}
+
+export interface PaginatedResponse<T> {
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  items: T[];
 }
 
 export interface PaginatedHistory {

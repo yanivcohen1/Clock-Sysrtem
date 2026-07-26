@@ -10,6 +10,7 @@ import type {
   AuditLogEntry,
   CurrentStatusResponse,
   PaginatedHistory,
+  PaginatedResponse,
 } from '../types';
 
 export const attendanceService = {
@@ -29,27 +30,29 @@ export const attendanceService = {
     return res.data;
   },
 
-  getHistory: async (from?: string, to?: string): Promise<AttendanceRecord[]> => {
+  getHistory: async (from?: string, to?: string, page = 1, pageSize = 10): Promise<AttendanceRecord[]> => {
     const params = new URLSearchParams();
     if (from) params.set('from', from);
     if (to) params.set('to', to);
+    params.set('page', String(page));
+    params.set('pageSize', String(pageSize));
     const res = await api.get<AttendanceRecord[]>(`/attendance/history?${params}`);
     return res.data;
   },
 
   // ── Reports (Manager/Admin) ────────────────────
-  getDailyReport: async (date: string): Promise<DailyReport> => {
-    const res = await api.get<DailyReport>(`/reports/daily?date=${date}`);
+  getDailyReport: async (date: string, page = 1, pageSize = 10): Promise<DailyReport> => {
+    const res = await api.get<DailyReport>(`/reports/daily?date=${date}&page=${page}&pageSize=${pageSize}`);
     return res.data;
   },
 
-  getMonthlyReport: async (year: number, month: number): Promise<MonthlyReport[]> => {
-    const res = await api.get<MonthlyReport[]>(`/reports/monthly?year=${year}&month=${month}`);
+  getMonthlyReport: async (year: number, month: number, page = 1, pageSize = 10): Promise<PaginatedResponse<MonthlyReport>> => {
+    const res = await api.get<PaginatedResponse<MonthlyReport>>(`/reports/monthly?year=${year}&month=${month}&page=${page}&pageSize=${pageSize}`);
     return res.data;
   },
 
-  getCurrentStatus: async (): Promise<CurrentStatusResponse> => {
-    const res = await api.get<CurrentStatusResponse>('/reports/current-status');
+  getCurrentStatus: async (page = 1, pageSize = 10): Promise<CurrentStatusResponse> => {
+    const res = await api.get<CurrentStatusResponse>(`/reports/current-status?page=${page}&pageSize=${pageSize}`);
     return res.data;
   },
 
@@ -76,12 +79,12 @@ export const attendanceService = {
     return res.data;
   },
 
-  getEmployees: async (): Promise<EmployeeDto[]> => {
-    const res = await api.get<EmployeeDto[]>('/admin/employees');
+  getEmployees: async (page = 1, pageSize = 10): Promise<PaginatedResponse<EmployeeDto>> => {
+    const res = await api.get<PaginatedResponse<EmployeeDto>>(`/admin/employees?page=${page}&pageSize=${pageSize}`);
     return res.data;
   },
 
-  getAuditLog: async (page = 1): Promise<{ total: number; logs: AuditLogEntry[] }> => {
+  getAuditLog: async (page = 1): Promise<{ total: number; page: number; pageSize: number; logs: AuditLogEntry[] }> => {
     const res = await api.get(`/admin/audit-log?page=${page}`);
     return res.data;
   },

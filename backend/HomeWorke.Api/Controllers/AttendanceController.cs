@@ -46,9 +46,12 @@ public class AttendanceController : ControllerBase
     /// <summary>Get attendance history for the authenticated employee.</summary>
     [HttpGet("history")]
     public async Task<IActionResult> GetHistory(
-        [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var result = await _attendanceService.GetHistoryAsync(GetEmployeeId(), from, to);
+        var result = await _attendanceService.GetHistoryAsync(GetEmployeeId(), from, to, page, pageSize);
         return Ok(result);
     }
 

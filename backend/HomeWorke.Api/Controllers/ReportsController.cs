@@ -30,42 +30,80 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("daily")]
-    public async Task<IActionResult> GetDailyReport([FromQuery] DateTime? date)
+    public async Task<IActionResult> GetDailyReport(
+        [FromQuery] DateTime? date,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var reportDate = date?.Date ?? DateTime.UtcNow.Date;
-        var records = await _attendanceService.GetDailyReportAsync(reportDate, GetManagerFilter());
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+        if (pageSize > 100) pageSize = 100;
 
-        var present = records.Count(r => r.Status == "Present");
-        var absent = records.Count(r => r.Status == "Absent");
-        var completed = records.Count(r => r.ClockOut != null);
-        var avgHours = records.Any(r => r.HoursWorked != null)
-            ? Math.Round(records.Where(r => r.HoursWorked != null).Average(r => r.HoursWorked!.Value), 2)
+        var reportDate = date?.Date ?? DateTime.UtcNow.Date;
+        var allRecords = await _attendanceService.GetDailyReportAsync(reportDate, GetManagerFilter());
+
+        var totalCount = allRecords.Count;
+        var present = allRecords.Count(r => r.Status == "Present");
+        var absent = allRecords.Count(r => r.Status == "Absent");
+        var completed = allRecords.Count(r => r.ClockOut != null);
+        var avgHours = allRecords.Any(r => r.HoursWorked != null)
+            ? Math.Round(allRecords.Where(r => r.HoursWorked != null).Average(r => r.HoursWorked!.Value), 2)
             : 0;
 
-        return Ok(new DailyReportResponse(
-            reportDate, records.Count, present, absent, completed, avgHours, records));
+        var paged = allRecords.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+        return Ok(new
+        {
+            date = reportDate,
+            totalCount,
+            page,
+            pageSize,
+            presentCount = present,
+            absentCount = absent,
+            completedCount = completed,
+            averageHours = avgHours,
+            records = paged
+        });
     }
 
     [HttpGet("monthly")]
-    public async Task<IActionResult> GetMonthlyReport([FromQuery] int year, [FromQuery] int month)
+    public async Task<IActionResult> GetMonthlyReport(
+        [FromQuery] int year, [FromQuery] int month,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         if (year < 2000 || month < 1 || month > 12)
             return BadRequest(new { error = "Invalid year or month." });
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+        if (pageSize > 100) pageSize = 100;
 
-        var records = await _attendanceService.GetMonthlyReportAsync(year, month, GetManagerFilter());
-        return Ok(records);
+        var allRecords = await _attendanceService.GetMonthlyReportAsync(year, month, GetManagerFilter());
+        var totalCount = allRecords.Count;
+        var paged = allRecords.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+        return Ok(new PaginatedResponse<MonthlyReportResponse>(totalCount, page, pageSize, paged));
     }
 
     [HttpGet("current-status")]
-    public async Task<IActionResult> GetCurrentStatus()
+    public async Task<IActionResult> GetCurrentStatus(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var statuses = await _attendanceService.GetCurrentStatusAllAsync(GetManagerFilter());
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+        if (pageSize > 100) pageSize = 100;
+
+        var allStatuses = await _attendanceService.GetCurrentStatusAllAsync(GetManagerFilter());
+        var totalCount = allStatuses.Count;
+        var paged = allStatuses.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
         return Ok(new
         {
-            totalEmployees = statuses.Count,
-            workingNow = statuses.Count(s => s.IsWorking),
-            notWorking = statuses.Count(s => !s.IsWorking),
-            employees = statuses
+            totalCount,
+            page,
+            pageSize,
+            workingNow = allStatuses.Count(s => s.IsWorking),
+            notWorking = allStatuses.Count(s => !s.IsWorking),
+            employees = paged
         });
     }
 
@@ -75,10 +113,10 @@ public class ReportsController : ControllerBase
         [FromQuery] DateTime? from = null,
         [FromQuery] DateTime? to = null,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+        [FromQuery] int pageSize = 10)
     {
         if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 20;
+        if (pageSize < 1) pageSize = 10;
         if (pageSize > 100) pageSize = 100;
 
         var result = await _attendanceService.GetAllHistoryAsync(
