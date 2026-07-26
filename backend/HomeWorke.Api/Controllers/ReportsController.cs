@@ -16,12 +16,23 @@ public class ReportsController : ControllerBase
     public ReportsController(IAttendanceService attendanceService) =>
         _attendanceService = attendanceService;
 
-    /// <summary>Get daily attendance report for a specific date.</summary>
+    /// <summary>
+    /// Returns managerId filter:
+    /// - Admin → null (see all employees)
+    /// - Manager → their own ID (see only subordinates)
+    /// </summary>
+    private int? GetManagerFilter()
+    {
+        var role = User.FindFirst(ClaimTypes.Role)?.Value;
+        if (role == "Admin") return null;
+        return GetEmployeeId();
+    }
+
     [HttpGet("daily")]
     public async Task<IActionResult> GetDailyReport([FromQuery] DateTime? date)
     {
         var reportDate = date?.Date ?? DateTime.UtcNow.Date;
-        var records = await _attendanceService.GetDailyReportAsync(reportDate);
+        var records = await _attendanceService.GetDailyReportAsync(reportDate, GetManagerFilter());
 
         var present = records.Count(r => r.Status == "Present");
         var absent = records.Count(r => r.Status == "Absent");
@@ -31,33 +42,23 @@ public class ReportsController : ControllerBase
             : 0;
 
         return Ok(new DailyReportResponse(
-            reportDate,
-            records.Count,
-            present,
-            absent,
-            completed,
-            avgHours,
-            records
-        ));
+            reportDate, records.Count, present, absent, completed, avgHours, records));
     }
 
-    /// <summary>Get monthly attendance summary grouped by employee.</summary>
     [HttpGet("monthly")]
-    public async Task<IActionResult> GetMonthlyReport(
-        [FromQuery] int year, [FromQuery] int month)
+    public async Task<IActionResult> GetMonthlyReport([FromQuery] int year, [FromQuery] int month)
     {
         if (year < 2000 || month < 1 || month > 12)
             return BadRequest(new { error = "Invalid year or month." });
 
-        var records = await _attendanceService.GetMonthlyReportAsync(year, month);
+        var records = await _attendanceService.GetMonthlyReportAsync(year, month, GetManagerFilter());
         return Ok(records);
     }
 
-    /// <summary>Get current working status of ALL active employees (who is working now).</summary>
     [HttpGet("current-status")]
     public async Task<IActionResult> GetCurrentStatus()
     {
-        var statuses = await _attendanceService.GetCurrentStatusAllAsync();
+        var statuses = await _attendanceService.GetCurrentStatusAllAsync(GetManagerFilter());
         return Ok(new
         {
             totalEmployees = statuses.Count,
@@ -67,7 +68,6 @@ public class ReportsController : ControllerBase
         });
     }
 
-    /// <summary>Get paginated attendance history across all employees.</summary>
     [HttpGet("history")]
     public async Task<IActionResult> GetHistory(
         [FromQuery] int? employeeId = null,
@@ -81,7 +81,10 @@ public class ReportsController : ControllerBase
         if (pageSize > 100) pageSize = 100;
 
         var result = await _attendanceService.GetAllHistoryAsync(
-            employeeId, from, to, page, pageSize);
+            employeeId, from, to, page, pageSize, GetManagerFilter());
         return Ok(result);
     }
+
+    private int GetEmployeeId() =>
+        int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 }

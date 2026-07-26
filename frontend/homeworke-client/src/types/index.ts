@@ -96,6 +96,8 @@ export interface EmployeeDto {
   role: string;
   isActive: boolean;
   lastLoginAt: string | null;
+  managerId: number | null;
+  managerName: string | null;
 }
 
 // ── Reports: Current Status & History ───────────

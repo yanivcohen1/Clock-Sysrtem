@@ -38,6 +38,7 @@ public class AdminController : ControllerBase
     {
         var employees = await _db.Employees
             .Include(e => e.Department)
+            .Include(e => e.Manager)
             .OrderBy(e => e.LastName)
             .Select(e => new EmployeeDto(
                 e.Id,
@@ -47,7 +48,9 @@ public class AdminController : ControllerBase
                 e.Department != null ? e.Department.Name : "—",
                 e.Role.ToString(),
                 e.IsActive,
-                e.LastLoginAt
+                e.LastLoginAt,
+                e.ManagerId,
+                e.Manager != null ? e.Manager.FullName : null
             ))
             .ToListAsync();
 
@@ -115,6 +118,16 @@ public class AdminController : ControllerBase
         if (!Enum.TryParse<UserRole>(request.Role, true, out var role))
             role = UserRole.Employee;
 
+        // Validate manager assignment (for Employee and Manager roles)
+        int? managerId = null;
+        if ((role == UserRole.Employee || role == UserRole.Manager) && request.ManagerId.HasValue)
+        {
+            var manager = await _db.Employees.FindAsync(request.ManagerId.Value);
+            if (manager == null || (manager.Role != UserRole.Manager && manager.Role != UserRole.Admin))
+                return BadRequest(new { error = "Invalid manager. Manager must have Manager or Admin role." });
+            managerId = manager.Id;
+        }
+
         var lastEmp = await _db.Employees.OrderByDescending(e => e.Id).FirstOrDefaultAsync();
         var nextNum = (lastEmp?.Id ?? 0) + 1;
 
@@ -127,6 +140,7 @@ public class AdminController : ControllerBase
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             Role = role,
             DepartmentId = request.DepartmentId,
+            ManagerId = managerId,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
@@ -145,9 +159,14 @@ public class AdminController : ControllerBase
         });
         await _db.SaveChangesAsync();
 
+        // Reload with manager for the response
+        await _db.Entry(employee).Reference(e => e.Manager).LoadAsync();
+
         return Ok(new EmployeeDto(
             employee.Id, employee.EmployeeCode, employee.FullName, employee.Email,
-            employee.Department?.Name ?? "—", employee.Role.ToString(), employee.IsActive, employee.LastLoginAt
+            employee.Department?.Name ?? "—", employee.Role.ToString(), employee.IsActive, employee.LastLoginAt,
+            employee.ManagerId,
+            employee.Manager?.FullName
         ));
     }
 

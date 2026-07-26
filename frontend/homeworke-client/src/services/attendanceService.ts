@@ -98,6 +98,7 @@ export const attendanceService = {
     password: string;
     departmentId?: number;
     role: string;
+    managerId?: number;
   }): Promise<EmployeeDto> => {
     const res = await api.post<EmployeeDto>('/admin/employees', data);
     return res.data;

@@ -13,6 +13,9 @@ public class Employee
     public UserRole Role { get; set; } = UserRole.Employee;
     public int? DepartmentId { get; set; }
     public Department? Department { get; set; }
+    public int? ManagerId { get; set; }
+    public Employee? Manager { get; set; }
+    public ICollection<Employee> Subordinates { get; set; } = new List<Employee>();
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }

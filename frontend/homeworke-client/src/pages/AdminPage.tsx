@@ -16,7 +16,7 @@ export const AdminPage: React.FC = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [resetPwdId, setResetPwdId] = useState<number | null>(null);
   const [actionError, setActionError] = useState('');
-  const [newEmp, setNewEmp] = useState({ firstName: '', lastName: '', email: '', password: '', departmentId: 0, role: 'Employee' });
+  const [newEmp, setNewEmp] = useState({ firstName: '', lastName: '', email: '', password: '', departmentId: 0, role: 'Employee', managerId: 0 });
 
   const fetchData = async () => {
     setLoading(true); setActionError('');
@@ -39,7 +39,7 @@ export const AdminPage: React.FC = () => {
   };
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault(); setActionError('');
-    try { await attendanceService.createEmployee({ ...newEmp, departmentId: newEmp.departmentId || undefined }); setShowAddForm(false); setNewEmp({ firstName: '', lastName: '', email: '', password: '', departmentId: 0, role: 'Employee' }); fetchData(); }
+    try { await attendanceService.createEmployee({ ...newEmp, departmentId: newEmp.departmentId || undefined, managerId: newEmp.managerId || undefined }); setShowAddForm(false); setNewEmp({ firstName: '', lastName: '', email: '', password: '', departmentId: 0, role: 'Employee', managerId: 0 }); fetchData(); }
     catch (err: any) { setActionError(err.response?.data?.error || 'Failed'); }
   };
   const handleResetPassword = async (empId: number, pwd: string) => {
@@ -74,8 +74,11 @@ export const AdminPage: React.FC = () => {
               <div><label className="block text-xs font-medium text-gray-600 mb-1">Password *</label><input required minLength={6} value={newEmp.password} onChange={e => setNewEmp({ ...newEmp, password: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none" /></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="block text-xs font-medium text-gray-600 mb-1">Department</label><select value={newEmp.departmentId} onChange={e => setNewEmp({ ...newEmp, departmentId: Number(e.target.value) })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"><option value={0}>— Optional —</option><option value={1}>Engineering</option><option value={2}>HR</option><option value={3}>Marketing</option><option value={4}>Finance</option><option value={5}>Operations</option></select></div>
-                <div><label className="block text-xs font-medium text-gray-600 mb-1">Role</label><select value={newEmp.role} onChange={e => setNewEmp({ ...newEmp, role: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"><option>Employee</option><option>Manager</option><option>Admin</option></select></div>
+                <div><label className="block text-xs font-medium text-gray-600 mb-1">Role</label><select value={newEmp.role} onChange={e => setNewEmp({ ...newEmp, role: e.target.value, managerId: 0 })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"><option>Employee</option><option>Manager</option><option>Admin</option></select></div>
               </div>
+              {(newEmp.role === 'Employee' || newEmp.role === 'Manager') && (
+                <div><label className="block text-xs font-medium text-gray-600 mb-1">Manager{newEmp.role === 'Employee' ? ' *' : ''}</label><select required={newEmp.role === 'Employee'} value={newEmp.managerId} onChange={e => setNewEmp({ ...newEmp, managerId: Number(e.target.value) })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"><option value={0}>— {newEmp.role === 'Employee' ? 'Select Manager' : 'Optional'} —</option>{employees.filter(e => e.role === 'Manager' || e.role === 'Admin').map(m => (<option key={m.id} value={m.id}>{m.fullName} ({m.role})</option>))}</select></div>
+              )}
               <button type="submit" className="w-full flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 rounded-lg"><Plus className="h-4 w-4" />Create Employee</button>
             </form>
           </div>
@@ -95,12 +98,13 @@ export const AdminPage: React.FC = () => {
       {!loading && tab === 'employees' && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-gray-50"><tr>
-            <th className="text-left px-4 py-3 font-medium text-gray-600">Employee</th><th className="text-left px-4 py-3 font-medium text-gray-600">Email</th><th className="text-left px-4 py-3 font-medium text-gray-600">Dept</th><th className="text-left px-4 py-3 font-medium text-gray-600">Role</th><th className="text-left px-4 py-3 font-medium text-gray-600">Status</th><th className="text-left px-4 py-3 font-medium text-gray-600">Actions</th>
+            <th className="text-left px-4 py-3 font-medium text-gray-600">Employee</th><th className="text-left px-4 py-3 font-medium text-gray-600">Email</th><th className="text-left px-4 py-3 font-medium text-gray-600">Dept</th><th className="text-left px-4 py-3 font-medium text-gray-600">Role</th><th className="text-left px-4 py-3 font-medium text-gray-600">Manager</th><th className="text-left px-4 py-3 font-medium text-gray-600">Status</th><th className="text-left px-4 py-3 font-medium text-gray-600">Actions</th>
           </tr></thead><tbody>
             {employees.map(emp => (<tr key={emp.id} className="border-t border-gray-100 hover:bg-gray-50">
               <td className="px-4 py-3"><span className="font-medium">{emp.fullName}</span><span className="text-gray-400 ml-1 text-xs">({emp.employeeCode})</span></td>
               <td className="px-4 py-3 text-gray-600 text-xs">{emp.email}</td><td className="px-4 py-3 text-xs">{emp.department}</td>
               <td className="px-4 py-3"><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${emp.role==='Admin'?'bg-purple-100 text-purple-800':emp.role==='Manager'?'bg-blue-100 text-blue-800':'bg-gray-100 text-gray-800'}`}>{emp.role}</span></td>
+              <td className="px-4 py-3 text-xs text-gray-500">{emp.managerName || '—'}</td>
               <td className="px-4 py-3"><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${emp.isActive?'bg-green-100 text-green-800':'bg-red-100 text-red-800'}`}>{emp.isActive?'Active':'Inactive'}</span></td>
               <td className="px-4 py-3"><div className="flex items-center gap-1.5">
                 <button onClick={() => handleToggleStatus(emp)} title={emp.isActive?'Deactivate':'Activate'} className={`p-1.5 rounded-lg ${emp.isActive?'text-orange-600 hover:bg-orange-50':'text-green-600 hover:bg-green-50'}`}><ToggleLeft className="h-4 w-4" /></button>

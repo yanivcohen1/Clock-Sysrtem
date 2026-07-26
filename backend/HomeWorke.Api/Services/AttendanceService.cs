@@ -12,11 +12,11 @@ public interface IAttendanceService
     Task<AttendanceResponse> ClockOutAsync(int employeeId, ClockRequest request);
     Task<AttendanceResponse?> GetCurrentStatusAsync(int employeeId);
     Task<List<AttendanceResponse>> GetHistoryAsync(int employeeId, DateTime? from, DateTime? to);
-    Task<List<AttendanceSummaryResponse>> GetDailyReportAsync(DateTime date);
-    Task<List<MonthlyReportResponse>> GetMonthlyReportAsync(int year, int month);
+    Task<List<AttendanceSummaryResponse>> GetDailyReportAsync(DateTime date, int? managerId = null);
+    Task<List<MonthlyReportResponse>> GetMonthlyReportAsync(int year, int month, int? managerId = null);
     Task<AttendanceResponse> AdminAdjustAsync(int adminId, AdminAdjustmentRequest request);
-    Task<PaginatedHistoryResponse> GetAllHistoryAsync(int? employeeId, DateTime? from, DateTime? to, int page, int pageSize);
-    Task<List<EmployeeStatusResponse>> GetCurrentStatusAllAsync();
+    Task<PaginatedHistoryResponse> GetAllHistoryAsync(int? employeeId, DateTime? from, DateTime? to, int page, int pageSize, int? managerId = null);
+    Task<List<EmployeeStatusResponse>> GetCurrentStatusAllAsync(int? managerId = null);
 }
 
 public class AttendanceService : IAttendanceService
@@ -160,11 +160,18 @@ public class AttendanceService : IAttendanceService
         return records.Select(r => MapToResponse(r, r.Employee)).ToList();
     }
 
-    public async Task<List<AttendanceSummaryResponse>> GetDailyReportAsync(DateTime date)
+    public async Task<List<AttendanceSummaryResponse>> GetDailyReportAsync(DateTime date, int? managerId = null)
     {
-        // Get ALL active employees, then left-join with today's attendance records
-        var employees = await _db.Employees
-            .Where(e => e.IsActive)
+        // Get ALL active employees (filtered by manager hierarchy if provided), then left-join with today's attendance records
+        var employeeQuery = _db.Employees.Where(e => e.IsActive);
+
+        if (managerId.HasValue)
+        {
+            var subIds = await GetSubordinateIdsAsync(managerId.Value);
+            employeeQuery = employeeQuery.Where(e => subIds.Contains(e.Id));
+        }
+
+        var employees = await employeeQuery
             .OrderBy(e => e.LastName)
             .ToListAsync();
 
@@ -198,12 +205,19 @@ public class AttendanceService : IAttendanceService
         return result;
     }
 
-    public async Task<List<MonthlyReportResponse>> GetMonthlyReportAsync(int year, int month)
+    public async Task<List<MonthlyReportResponse>> GetMonthlyReportAsync(int year, int month, int? managerId = null)
     {
-        var records = await _db.AttendanceRecords
+        var recordsQuery = _db.AttendanceRecords
             .Include(r => r.Employee)
-            .Where(r => r.ShiftDate.Year == year && r.ShiftDate.Month == month)
-            .ToListAsync(); // Bring into memory to avoid EF Core translation of computed properties
+            .Where(r => r.ShiftDate.Year == year && r.ShiftDate.Month == month);
+
+        if (managerId.HasValue)
+        {
+            var subIds = await GetSubordinateIdsAsync(managerId.Value);
+            recordsQuery = recordsQuery.Where(r => subIds.Contains(r.EmployeeId));
+        }
+
+        var records = await recordsQuery.ToListAsync(); // Bring into memory to avoid EF Core translation of computed properties
 
         var grouped = records
             .GroupBy(r => new { r.EmployeeId, r.Employee.FirstName, r.Employee.LastName, r.Employee.EmployeeCode })
@@ -282,7 +296,7 @@ public class AttendanceService : IAttendanceService
     }
 
     public async Task<PaginatedHistoryResponse> GetAllHistoryAsync(
-        int? employeeId, DateTime? from, DateTime? to, int page, int pageSize)
+        int? employeeId, DateTime? from, DateTime? to, int page, int pageSize, int? managerId = null)
     {
         var query = _db.AttendanceRecords
             .Include(r => r.Employee)
@@ -290,6 +304,11 @@ public class AttendanceService : IAttendanceService
 
         if (employeeId.HasValue)
             query = query.Where(r => r.EmployeeId == employeeId.Value);
+        if (managerId.HasValue)
+        {
+            var subIds = await GetSubordinateIdsAsync(managerId.Value);
+            query = query.Where(r => subIds.Contains(r.EmployeeId));
+        }
         if (from.HasValue)
             query = query.Where(r => r.ShiftDate >= from.Value.Date);
         if (to.HasValue)
@@ -312,10 +331,17 @@ public class AttendanceService : IAttendanceService
         );
     }
 
-    public async Task<List<EmployeeStatusResponse>> GetCurrentStatusAllAsync()
+    public async Task<List<EmployeeStatusResponse>> GetCurrentStatusAllAsync(int? managerId = null)
     {
-        var employees = await _db.Employees
-            .Where(e => e.IsActive)
+        var employeeQuery = _db.Employees.Where(e => e.IsActive);
+
+        if (managerId.HasValue)
+        {
+            var subIds = await GetSubordinateIdsAsync(managerId.Value);
+            employeeQuery = employeeQuery.Where(e => subIds.Contains(e.Id));
+        }
+
+        var employees = await employeeQuery
             .OrderBy(e => e.LastName)
             .ToListAsync();
 
@@ -342,6 +368,35 @@ public class AttendanceService : IAttendanceService
                 openRecord?.ClockOut,
                 Math.Round(completedToday, 2)
             ));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Returns ALL subordinate employee IDs in the management chain below the given manager,
+    /// collected recursively (BFS). Does NOT include the manager themselves.
+    /// </summary>
+    private async Task<HashSet<int>> GetSubordinateIdsAsync(int managerId)
+    {
+        var allEmployees = await _db.Employees
+            .Where(e => e.IsActive)
+            .Select(e => new { e.Id, e.ManagerId })
+            .ToListAsync();
+
+        var result = new HashSet<int>();
+        var queue = new Queue<int>();
+        queue.Enqueue(managerId);
+
+        while (queue.Count > 0)
+        {
+            var currentId = queue.Dequeue();
+            var subordinates = allEmployees.Where(e => e.ManagerId == currentId).Select(e => e.Id);
+            foreach (var subId in subordinates)
+            {
+                if (result.Add(subId))
+                    queue.Enqueue(subId);
+            }
         }
 
         return result;

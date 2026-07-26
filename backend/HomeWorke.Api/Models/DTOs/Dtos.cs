@@ -76,7 +76,9 @@ public record EmployeeDto(
     string Department,
     string Role,
     bool IsActive,
-    DateTime? LastLoginAt
+    DateTime? LastLoginAt,
+    int? ManagerId = null,
+    string? ManagerName = null
 );
 
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
@@ -87,7 +89,8 @@ public record AdminCreateEmployeeRequest(
     string Email,
     string Password,
     int? DepartmentId,
-    string Role // "Employee", "Manager", or "Admin"
+    string Role, // "Employee", "Manager", or "Admin"
+    int? ManagerId = null
 );
 
 public record ForgotPasswordRequest(string Email);

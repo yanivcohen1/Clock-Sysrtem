@@ -26,6 +26,12 @@ public class AppDbContext : DbContext
             e.Property(x => x.Email).HasMaxLength(200).IsRequired();
             e.Property(x => x.PasswordHash).HasMaxLength(500).IsRequired();
             e.Property(x => x.EmployeeCode).HasMaxLength(20).IsRequired();
+
+            // Self-referencing: Employee → Manager
+            e.HasOne(x => x.Manager)
+             .WithMany(x => x.Subordinates)
+             .HasForeignKey(x => x.ManagerId)
+             .OnDelete(DeleteBehavior.Restrict);
         });
 
         // AttendanceRecord
@@ -78,10 +84,25 @@ public class AppDbContext : DbContext
             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         });
 
-        // Seed demo employee (password: Demo@123)
+        // Seed demo manager (password: Manager@123)
         modelBuilder.Entity<Employee>().HasData(new Employee
         {
             Id = 2,
+            EmployeeCode = "EMP-MGR",
+            FirstName = "Demo",
+            LastName = "Manager",
+            Email = "manager@homeworke.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Manager@123"),
+            Role = Models.Enums.UserRole.Manager,
+            DepartmentId = 1,
+            IsActive = true,
+            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
+
+        // Seed demo employee (password: Demo@123) — managed by Demo Manager
+        modelBuilder.Entity<Employee>().HasData(new Employee
+        {
+            Id = 3,
             EmployeeCode = "EMP-DEMO",
             FirstName = "Demo",
             LastName = "User",
@@ -89,6 +110,7 @@ public class AppDbContext : DbContext
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("Demo@123"),
             Role = Models.Enums.UserRole.Employee,
             DepartmentId = 1,
+            ManagerId = 2, // Managed by Demo Manager (ID=2)
             IsActive = true,
             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         });
