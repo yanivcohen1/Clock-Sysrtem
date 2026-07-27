@@ -47,6 +47,8 @@ A full-stack time and attendance system with **React** frontend and **ASP.NET Co
   docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=YourStrong!Passw0rd" \
     -p 1433:1433 -d mcr.microsoft.com/mssql/server:2022-latest
 
+  sqlcmd -S localhost,1433 -U sa -P "YourStrong!Passw0rd" -C -i database/init.sql
+
 # Or use the raw SQL init script
 sqlcmd -S localhost -i database/init.sql
 ```
