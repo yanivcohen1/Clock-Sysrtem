@@ -76,8 +76,10 @@ npm install
 npm run dev                 # Starts on http://localhost:5173
 
 # Run tests
-npm test                    # Single run
-npm run test:watch          # Watch mode
+npm test                    # Unit tests (Vitest)
+npm run test:watch          # Unit tests in watch mode
+npm run test:e2e            # E2E tests (Playwright)
+npm run test:e2e:ui         # E2E interactive UI mode
 ```
 
 ### 4. Login
@@ -124,6 +126,24 @@ npm run test:coverage    # With coverage report
 | `useAttendance.test.ts` | 6 | Hook: default state, fetchStatus (success/error), clockIn (success/error), clockOut |
 | `LoginPage.test.tsx` | 6 | Component: renders form, branding, login submission, error display, forgot-password link, demo credentials |
 | `api.test.ts` | 2 | Axios instance: base URL, request/response interceptors registered |
+
+### End-to-End (Playwright)
+
+**18 tests** across 3 spec files running against a real browser (Chromium) with both backend and frontend servers auto-started.
+
+```bash
+cd frontend/homeworke-client
+npm run test:e2e           # Headless run
+npm run test:e2e:ui        # Interactive UI mode (playwright test --ui)
+```
+
+> Playwright config lives at the workspace root (`playwright.config.ts`) and auto-starts `dotnet run` + `npm run dev` before tests.
+
+| File | Tests | What's covered |
+|---|---|---|
+| `auth.spec.ts` | 9 | Login form, branding, invalid credentials error, employee login → dashboard, admin login → admin link, redirect unauthenticated → login, forgot-password page, logout |
+| `attendance.spec.ts` | 4 | Dashboard clock controls, navigate to attendance page, navigate to history, history page with table/heading |
+| `navigation.spec.ts` | 5 | Sidebar/header nav links, dashboard as landing page, welcome heading, admin panel access, reports page access |
 
 ---
 
@@ -216,8 +236,10 @@ HomeWorke/
 │       │   ├── context/          # Auth context
 │       │   ├── types/            # TypeScript interfaces
 │       │   └── test/             # Unit tests (Vitest + React Testing Library)
+│       ├── e2e/                   # E2E tests (Playwright)
 │       ├── package.json
 │       └── vite.config.ts        # Vite + Vitest config
+├── playwright.config.ts           # Playwright config (workspace root)
 └── database/
     └── init.sql                  # Raw SQL schema + seed data
 ```
@@ -275,6 +297,7 @@ HomeWorke/
 - [x] Consistent pagination: ◀ Prev / Page X of Y / Next ▶ on all tables
 - [x] Global page size: 10 items per page across the entire application
 - [x] Unit tests: 33 C# backend tests (xUnit) + 29 React frontend tests (Vitest)
+- [x] E2E tests: 18 Playwright tests covering auth, attendance, navigation, and admin flows
 
 ## 🔮 Future Enhancements
 - [ ] Location/geofencing validation for clock-in
