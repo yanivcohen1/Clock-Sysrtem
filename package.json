@@ -11,6 +11,7 @@
     "test:e2e": "cd ./frontend/homeworke-client && pnpm test:e2e",
     "test:e2e:report": "cd ./frontend/homeworke-client && pnpm test:e2e:report",
     "test:e2e:ui": "cd ./frontend/homeworke-client && pnpm test:e2e:ui",
+    
     "serve": "cd ./backend/HomeWorke.Api && dotnet run",
     "serve:prod": "cd ./backend/HomeWorke.Api && dotnet run -- --env prod",
     "format:be": "cd ./backend/HomeWorke.Api && dotnet format",
