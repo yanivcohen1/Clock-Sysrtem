@@ -22,3 +22,5 @@ Thumbs.db
 *.swp
 backend/HomeWorke.Api/HomeWorke.db-wal
 backend/HomeWorke.Api/HomeWorke.db-shm
+playwright-report/
+test-results/
