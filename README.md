@@ -60,6 +60,10 @@ cd backend/HomeWorke.Api
 dotnet restore
 dotnet ef database update   # Apply migrations
 dotnet run                  # Starts on http://localhost:5001
+
+# Run tests
+cd ../HomeWorke.Api.Tests
+dotnet test
 ```
 
 Swagger UI available at: http://localhost:5001/swagger
@@ -70,6 +74,10 @@ Swagger UI available at: http://localhost:5001/swagger
 cd frontend/homeworke-client
 npm install
 npm run dev                 # Starts on http://localhost:5173
+
+# Run tests
+npm test                    # Single run
+npm run test:watch          # Watch mode
 ```
 
 ### 4. Login
@@ -79,6 +87,43 @@ npm run dev                 # Starts on http://localhost:5173
 | Admin    | admin@homeworke.com     | Admin@123    |
 | Manager  | manager@homeworke.com   | Manager@123  |
 | Employee | demo@homeworke.com      | Demo@123     |
+
+---
+
+## 🧪 Testing
+
+### Backend (C# / xUnit)
+
+**33 tests** covering AuthService and AttendanceService using EF Core InMemory database and Moq for mocking.
+
+```bash
+cd backend/HomeWorke.Api.Tests
+dotnet test
+```
+
+| File | Tests | What's covered |
+|---|---|---|
+| `AuthServiceTests.cs` | 16 | Login (valid/wrong/inactive/unknown), Register (valid/duplicate/dept validation), ChangePassword, ResetPassword (valid/token expiry/short password), ValidateToken |
+| `AttendanceServiceTests.cs` | 17 | ClockIn (creates record/prevents double), ClockOut (valid/no active record/before clock-in/14h+ flag), GetCurrentStatus, GetHistory (pagination/date filters), AdminAdjust (audit trail), GetCurrentStatusAll, GetDailyReport |
+
+### Frontend (React / Vitest)
+
+**29 tests** across services, hooks, and components using Vitest with React Testing Library and jsdom.
+
+```bash
+cd frontend/homeworke-client
+npm test                 # Run once
+npm run test:watch       # Watch mode
+npm run test:coverage    # With coverage report
+```
+
+| File | Tests | What's covered |
+|---|---|---|
+| `authService.test.ts` | 6 | login, register, changePassword, forgotPassword, resetPassword |
+| `attendanceService.test.ts` | 9 | clockIn, clockOut, getStatus, getHistory, getDailyReport, getMonthlyReport, getCurrentStatus |
+| `useAttendance.test.ts` | 6 | Hook: default state, fetchStatus (success/error), clockIn (success/error), clockOut |
+| `LoginPage.test.tsx` | 6 | Component: renders form, branding, login submission, error display, forgot-password link, demo credentials |
+| `api.test.ts` | 2 | Axios instance: base URL, request/response interceptors registered |
 
 ---
 
@@ -144,19 +189,23 @@ Frontend uses a consistent `PAGE_SIZE = 10` constant with matching pagination UI
 ```
 HomeWorke/
 ├── backend/
-│   └── HomeWorke.Api/
-│       ├── Controllers/          # Auth, Attendance, Reports, Admin
-│       ├── Models/
-│       │   ├── Domain/           # Employee, AttendanceRecord, etc.
-│       │   ├── DTOs/             # Request/response types
-│       │   └── Enums/            # Status, Role, RecordType
-│       ├── Services/             # Business logic
-│       │   ├── ITimeService.cs   # Zurich time via external API
-│       │   ├── AuthService.cs    # JWT authentication
-│       │   └── AttendanceService.cs  # Clock in/out logic
-│       ├── Data/                 # EF Core DbContext
-│       ├── Middleware/           # Global exception handling
-│       └── Program.cs            # App configuration
+│   ├── HomeWorke.Api/
+│   │   ├── Controllers/          # Auth, Attendance, Reports, Admin
+│   │   ├── Models/
+│   │   │   ├── Domain/           # Employee, AttendanceRecord, etc.
+│   │   │   ├── DTOs/             # Request/response types
+│   │   │   └── Enums/            # Status, Role, RecordType
+│   │   ├── Services/             # Business logic
+│   │   │   ├── ITimeService.cs   # Zurich time via external API
+│   │   │   ├── AuthService.cs    # JWT authentication
+│   │   │   └── AttendanceService.cs  # Clock in/out logic
+│   │   ├── Data/                 # EF Core DbContext
+│   │   ├── Middleware/           # Global exception handling
+│   │   └── Program.cs            # App configuration
+│   └── HomeWorke.Api.Tests/      # Unit tests (xUnit + EF Core InMemory + Moq)
+│       ├── AuthServiceTests.cs
+│       ├── AttendanceServiceTests.cs
+│       └── TestDbContextFactory.cs
 ├── frontend/
 │   └── homeworke-client/
 │       ├── src/
@@ -165,8 +214,10 @@ HomeWorke/
 │       │   ├── services/         # API client
 │       │   ├── hooks/            # Custom React hooks
 │       │   ├── context/          # Auth context
-│       │   └── types/            # TypeScript interfaces
-│       └── package.json
+│       │   ├── types/            # TypeScript interfaces
+│       │   └── test/             # Unit tests (Vitest + React Testing Library)
+│       ├── package.json
+│       └── vite.config.ts        # Vite + Vitest config
 └── database/
     └── init.sql                  # Raw SQL schema + seed data
 ```
@@ -223,6 +274,7 @@ HomeWorke/
 - [x] Demo seed data: 3 accounts + 32 attendance records + 55 audit log entries
 - [x] Consistent pagination: ◀ Prev / Page X of Y / Next ▶ on all tables
 - [x] Global page size: 10 items per page across the entire application
+- [x] Unit tests: 33 C# backend tests (xUnit) + 29 React frontend tests (Vitest)
 
 ## 🔮 Future Enhancements
 - [ ] Location/geofencing validation for clock-in
