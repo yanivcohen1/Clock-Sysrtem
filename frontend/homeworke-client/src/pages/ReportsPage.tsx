@@ -161,7 +161,7 @@ export const ReportsPage: React.FC = () => {
                 </thead>
                 <tbody>
                   {currentStatus.employees.map((e, i) => (
-                    <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
+                    <tr key={i} className="border-b border-gray-200 table-row-hover">
                       <td className="px-4 py-2.5">
                         <span className="font-medium">{e.employeeName}</span>
                         <span className="text-gray-400 ml-1 text-xs">({e.employeeCode})</span>
@@ -247,7 +247,7 @@ export const ReportsPage: React.FC = () => {
                     </thead>
                     <tbody>
                       {dailyReport.records.map((r, i) => (
-                        <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
+                        <tr key={i} className="border-b border-gray-200 table-row-hover">
                           <td className="px-4 py-2.5">
                             <span className="font-medium">{r.employeeName}</span>
                             <span className="text-gray-400 ml-1 text-xs">({r.employeeCode})</span>
@@ -323,7 +323,7 @@ export const ReportsPage: React.FC = () => {
                 </thead>
                 <tbody>
                   {monthlyData?.items.map((r, i) => (
-                    <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
+                    <tr key={i} className="border-b border-gray-200 table-row-hover">
                       <td className="px-4 py-2.5 font-medium">{r.employeeName}</td>
                       <td className="px-4 py-2.5 text-center">{r.daysWorked}</td>
                       <td className="px-4 py-2.5 text-center text-red-600">{r.daysAbsent}</td>
@@ -417,7 +417,7 @@ export const ReportsPage: React.FC = () => {
                   </thead>
                   <tbody>
                     {historyData.records.map((r) => (
-                      <tr key={r.id} className="border-t border-gray-100 hover:bg-gray-50">
+                      <tr key={r.id} className="border-b border-gray-200 table-row-hover">
                         <td className="px-4 py-2.5">
                           <span className="font-medium">{r.employeeName}</span>
                           <span className="text-gray-400 ml-1 text-xs">({r.employeeCode})</span>

@@ -107,7 +107,7 @@ export const AdminPage: React.FC = () => {
           <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-gray-50"><tr>
             <th className="text-left px-4 py-3 font-medium text-gray-600">Employee</th><th className="text-left px-4 py-3 font-medium text-gray-600">Email</th><th className="text-left px-4 py-3 font-medium text-gray-600">Dept</th><th className="text-left px-4 py-3 font-medium text-gray-600">Role</th><th className="text-left px-4 py-3 font-medium text-gray-600">Manager</th><th className="text-left px-4 py-3 font-medium text-gray-600">Status</th><th className="text-left px-4 py-3 font-medium text-gray-600">Actions</th>
           </tr></thead><tbody>
-            {employees.map(emp => (<tr key={emp.id} className="border-t border-gray-100 hover:bg-gray-50">
+            {employees.map(emp => (<tr key={emp.id} className="border-b border-gray-200 table-row-hover">
               <td className="px-4 py-3"><span className="font-medium">{emp.fullName}</span><span className="text-gray-400 ml-1 text-xs">({emp.employeeCode})</span></td>
               <td className="px-4 py-3 text-gray-600 text-xs">{emp.email}</td><td className="px-4 py-3 text-xs">{emp.department}</td>
               <td className="px-4 py-3"><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${emp.role==='Admin'?'bg-purple-100 text-purple-800':emp.role==='Manager'?'bg-blue-100 text-blue-800':'bg-gray-100 text-gray-800'}`}>{emp.role}</span></td>
@@ -139,7 +139,7 @@ export const AdminPage: React.FC = () => {
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden"><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-gray-50"><tr>
           <th className="text-left px-4 py-3 font-medium text-gray-600">Timestamp</th><th className="text-left px-4 py-3 font-medium text-gray-600">Entity</th><th className="text-left px-4 py-3 font-medium text-gray-600">Action</th><th className="text-left px-4 py-3 font-medium text-gray-600">By</th><th className="text-left px-4 py-3 font-medium text-gray-600">Details</th>
         </tr></thead><tbody>
-          {auditLogs.map(log => (<tr key={log.id} className="border-t border-gray-100 hover:bg-gray-50">
+          {auditLogs.map(log => (<tr key={log.id} className="border-b border-gray-200 table-row-hover">
             <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{format(new Date(log.timestamp), 'MMM dd, HH:mm:ss')}</td>
             <td className="px-4 py-3 font-medium text-xs">{log.entityName} #{log.entityId}</td>
             <td className="px-4 py-3"><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${log.action==='ClockIn'?'bg-green-100 text-green-800':log.action==='ClockOut'?'bg-red-100 text-red-800':log.action==='AdminAdjustment'||log.action==='DeleteEmployee'?'bg-yellow-100 text-yellow-800':log.action==='ActivateEmployee'||log.action==='AdminCreateEmployee'?'bg-blue-100 text-blue-800':log.action==='DeactivateEmployee'?'bg-orange-100 text-orange-800':'bg-gray-100 text-gray-800'}`}>{log.action}</span></td>

@@ -82,10 +82,10 @@ describe('attendanceService', () => {
   });
 
   it('should GET /reports/monthly with year and month', async () => {
-    mockedGet.mockResolvedValueOnce({ data: { data: [], totalCount: 0, page: 1, pageSize: 10 } });
+    mockedGet.mockResolvedValueOnce({ data: { items: [], totalCount: 0, page: 1, pageSize: 10 } });
     const result = await attendanceService.getMonthlyReport(2026, 7);
     expect(mockedGet).toHaveBeenCalledWith('/reports/monthly?year=2026&month=7&page=1&pageSize=10');
-    expect(result.data).toEqual([]);
+    expect(result.items).toEqual([]);
   });
 
   it('should GET /reports/current-status', async () => {
