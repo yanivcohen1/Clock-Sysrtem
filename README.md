@@ -186,6 +186,22 @@ Four views with **10 items per page** and ◀ Prev / Page X of Y / Next ▶ cont
 - Delete employees (hard delete with audit log)
 - Adjust attendance records with mandatory reason
 
+### 🌓 Dark / Light Mode
+A theme toggle button (☀️/🌙) sits next to the **HomeWorke** branding in the sidebar and mobile header. Clicks persist to `localStorage` and the app respects your OS `prefers-color-scheme` on first visit.
+
+- **Tailwind `darkMode: 'class'`** — dark variants only activate when `<html>` has the `dark` class
+- **MUI theme** — `CssBaseline` + palette automatically switch between light and dark
+- **Anti-flash** — inline script in `index.html` applies the saved theme before first paint
+- **Global overrides** — card backgrounds, borders, and text colors adapt seamlessly
+
+### 📊 Table Stripes & Hover
+All tables use alternating row colors and a hover highlight:
+
+| Mode | Even Row | Odd Row | Hover |
+|------|----------|---------|-------|
+| ☀️ Light | `#e2e8f0` (slate-200) | `#ffffff` | `#bfdbfe` (blue-100) |
+| 🌙 Dark | `#1e293b` (slate-800) | `#111827` (gray-900) | `#1e3a5f` (blue-900) |
+
 ### 📄 Pagination
 Every table in the application is paginated with a **uniform page size of 10 items**:
 
@@ -233,7 +249,7 @@ HomeWorke/
 │       │   ├── pages/            # Route pages
 │       │   ├── services/         # API client
 │       │   ├── hooks/            # Custom React hooks
-│       │   ├── context/          # Auth context
+│       │   ├── context/          # Auth + Theme contexts
 │       │   ├── types/            # TypeScript interfaces
 │       │   └── test/             # Unit tests (Vitest + React Testing Library)
 │       ├── e2e/                   # E2E tests (Playwright)
@@ -296,6 +312,8 @@ HomeWorke/
 - [x] Demo seed data: 3 accounts + 32 attendance records + 55 audit log entries
 - [x] Consistent pagination: ◀ Prev / Page X of Y / Next ▶ on all tables
 - [x] Global page size: 10 items per page across the entire application
+- [x] 🌓 Dark / Light mode toggle with localStorage persistence & OS preference detection
+- [x] 📊 Table stripes: alternating row colors + hover highlight (light & dark variants)
 - [x] Unit tests: 33 C# backend tests (xUnit) + 29 React frontend tests (Vitest)
 - [x] E2E tests: 18 Playwright tests covering auth, attendance, navigation, and admin flows
 

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Clock, LayoutDashboard, History, BarChart3, Users, Shield, LogOut, Menu, X, Lock } from 'lucide-react';
+import { Clock, LayoutDashboard, History, BarChart3, Users, Shield, LogOut, Menu, X, Lock, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
 interface Props {
   children: React.ReactNode;
@@ -9,6 +10,7 @@ interface Props {
 
 export const Layout: React.FC<Props> = ({ children }) => {
   const { fullName, role, employeeCode, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = React.useState(false);
@@ -39,10 +41,19 @@ export const Layout: React.FC<Props> = ({ children }) => {
       {/* Sidebar — desktop */}
       <aside className="hidden md:flex md:flex-col md:w-64 bg-primary-800 text-white">
         <div className="p-5 border-b border-primary-700">
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <Clock className="h-6 w-6" />
-            HomeWorke
-          </h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold flex items-center gap-2">
+              <Clock className="h-6 w-6" />
+              HomeWorke
+            </h1>
+            <button
+              onClick={toggleTheme}
+              title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              className="p-1.5 rounded-lg text-primary-200 hover:text-white hover:bg-primary-700 transition-colors"
+            >
+              {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </button>
+          </div>
           <p className="text-primary-300 text-xs mt-1">Time & Attendance</p>
         </div>
 
@@ -81,9 +92,18 @@ export const Layout: React.FC<Props> = ({ children }) => {
             <Clock className="h-5 w-5" />
             <span className="font-bold">HomeWorke</span>
           </div>
-          <button onClick={() => setMobileOpen(!mobileOpen)}>
-            {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              className="p-1.5 rounded-lg text-primary-200 hover:text-white"
+            >
+              {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </button>
+            <button onClick={() => setMobileOpen(!mobileOpen)}>
+              {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
         </header>
 
         {/* Mobile nav */}
@@ -111,7 +131,7 @@ export const Layout: React.FC<Props> = ({ children }) => {
         )}
 
         {/* Main content */}
-        <main className="flex-1 p-4 md:p-8 bg-gray-50">{children}</main>
+        <main className="flex-1 p-4 md:p-8 bg-gray-50 dark:bg-gray-950">{children}</main>
       </div>
     </div>
   );
