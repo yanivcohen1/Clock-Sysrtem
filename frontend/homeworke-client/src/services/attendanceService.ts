@@ -114,4 +114,17 @@ export const attendanceService = {
   adminResetPassword: async (id: number, newPassword: string): Promise<void> => {
     await api.put(`/admin/employees/${id}/reset-password`, { newPassword });
   },
+
+  updateEmployee: async (id: number, data: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    departmentId?: number;
+    role?: string;
+    managerId?: number;
+    isActive?: boolean;
+  }): Promise<EmployeeDto> => {
+    const res = await api.put<EmployeeDto>(`/admin/employees/${id}`, data);
+    return res.data;
+  },
 };

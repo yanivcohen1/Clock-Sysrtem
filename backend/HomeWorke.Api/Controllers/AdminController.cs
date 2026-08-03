@@ -111,6 +111,94 @@ public class AdminController : ControllerBase
         return Ok(new { id = employee.Id, isActive = employee.IsActive });
     }
 
+    /// <summary>Update employee details (name, email, department, role, manager, status).</summary>
+    [HttpPut("employees/{id}")]
+    public async Task<IActionResult> UpdateEmployee(int id, [FromBody] AdminUpdateEmployeeRequest request)
+    {
+        var employee = await _db.Employees
+            .Include(e => e.Department)
+            .Include(e => e.Manager)
+            .FirstOrDefaultAsync(e => e.Id == id);
+
+        if (employee == null)
+            return NotFound(new { error = "Employee not found." });
+
+        if (employee.Id == GetEmployeeId() && request.IsActive == false)
+            return BadRequest(new { error = "You cannot deactivate yourself." });
+
+        var changes = new List<string>();
+
+        if (request.FirstName != null && request.FirstName.Trim() != employee.FirstName)
+        {
+            changes.Add($"FirstName: {employee.FirstName} → {request.FirstName.Trim()}");
+            employee.FirstName = request.FirstName.Trim();
+        }
+        if (request.LastName != null && request.LastName.Trim() != employee.LastName)
+        {
+            changes.Add($"LastName: {employee.LastName} → {request.LastName.Trim()}");
+            employee.LastName = request.LastName.Trim();
+        }
+        if (request.Email != null && request.Email.Trim().ToLowerInvariant() != employee.Email)
+        {
+            if (!request.Email.Contains('@'))
+                return BadRequest(new { error = "A valid email is required." });
+            var emailTaken = await _db.Employees.AnyAsync(e => e.Email == request.Email.Trim().ToLowerInvariant() && e.Id != id);
+            if (emailTaken)
+                return Conflict(new { error = "An employee with this email already exists." });
+            changes.Add($"Email: {employee.Email} → {request.Email.Trim().ToLowerInvariant()}");
+            employee.Email = request.Email.Trim().ToLowerInvariant();
+        }
+        if (request.DepartmentId.HasValue && request.DepartmentId.Value != employee.DepartmentId)
+        {
+            var dept = await _db.Departments.FindAsync(request.DepartmentId.Value);
+            changes.Add($"Department: {employee.Department?.Name ?? "—"} → {dept?.Name ?? "—"}");
+            employee.DepartmentId = request.DepartmentId.Value == 0 ? null : request.DepartmentId.Value;
+        }
+        if (request.Role != null && Enum.TryParse<UserRole>(request.Role, true, out var newRole) && newRole != employee.Role)
+        {
+            changes.Add($"Role: {employee.Role} → {newRole}");
+            employee.Role = newRole;
+        }
+        if (request.ManagerId.HasValue && request.ManagerId.Value != employee.ManagerId)
+        {
+            if (request.ManagerId.Value > 0)
+            {
+                var manager = await _db.Employees.FindAsync(request.ManagerId.Value);
+                if (manager == null || (manager.Role != UserRole.Manager && manager.Role != UserRole.Admin))
+                    return BadRequest(new { error = "Invalid manager. Manager must have Manager or Admin role." });
+            }
+            changes.Add($"ManagerId: {employee.ManagerId} → {(request.ManagerId.Value == 0 ? null : request.ManagerId.Value)}");
+            employee.ManagerId = request.ManagerId.Value == 0 ? null : request.ManagerId.Value;
+        }
+        if (request.IsActive.HasValue && request.IsActive.Value != employee.IsActive)
+        {
+            changes.Add($"IsActive: {employee.IsActive} → {request.IsActive.Value}");
+            employee.IsActive = request.IsActive.Value;
+        }
+
+        if (changes.Count == 0)
+            return Ok(new { message = "No changes detected." });
+
+        await _db.SaveChangesAsync();
+
+        _db.AuditLogs.Add(new AuditLog
+        {
+            EntityName = nameof(Employee),
+            EntityId = employee.Id,
+            Action = "AdminUpdateEmployee",
+            PerformedByEmployeeId = GetEmployeeId(),
+            NewValue = System.Text.Json.JsonSerializer.Serialize(changes),
+            Timestamp = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+
+        return Ok(new EmployeeDto(
+            employee.Id, employee.EmployeeCode, employee.FullName, employee.Email,
+            employee.Department?.Name ?? "—", employee.Role.ToString(), employee.IsActive,
+            employee.LastLoginAt, employee.ManagerId, employee.Manager?.FullName
+        ));
+    }
+
     /// <summary>Admin creates a new employee (with role assignment).</summary>
     [HttpPost("employees")]
     public async Task<IActionResult> CreateEmployee([FromBody] AdminCreateEmployeeRequest request)

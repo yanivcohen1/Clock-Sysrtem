@@ -99,6 +99,16 @@ public record ResetPasswordRequest(string Email, string ResetToken, string NewPa
 
 public record AdminResetPasswordRequest(string NewPassword);
 
+public record AdminUpdateEmployeeRequest(
+    string? FirstName,
+    string? LastName,
+    string? Email,
+    int? DepartmentId,
+    string? Role,
+    int? ManagerId,
+    bool? IsActive
+);
+
 public record ErrorResponse(string Message, string? Detail = null);
 
 // ── Reports: History & Current Status ──────────

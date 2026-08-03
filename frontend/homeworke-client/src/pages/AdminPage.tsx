@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { attendanceService } from '../services/attendanceService';
 import type { EmployeeDto, AuditLogEntry } from '../types';
 import { LoadingSpinner } from '../components/Common/LoadingSpinner';
-import { Shield, Users, FileText, UserPlus, ToggleLeft, Trash2, Key, X, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Shield, Users, FileText, UserPlus, Pencil, Trash2, Key, X, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 export const AdminPage: React.FC = () => {
@@ -21,6 +21,8 @@ export const AdminPage: React.FC = () => {
   const [resetPwdId, setResetPwdId] = useState<number | null>(null);
   const [actionError, setActionError] = useState('');
   const [newEmp, setNewEmp] = useState({ firstName: '', lastName: '', email: '', password: '', departmentId: 0, role: 'Employee', managerId: 0 });
+  const [editingEmp, setEditingEmp] = useState<EmployeeDto | null>(null);
+  const [editForm, setEditForm] = useState({ firstName: '', lastName: '', email: '', departmentId: 0, role: '', managerId: 0, isActive: true });
 
   const fetchData = async () => {
     setLoading(true); setActionError('');
@@ -34,10 +36,39 @@ export const AdminPage: React.FC = () => {
   };
   useEffect(() => { fetchData(); }, [tab, auditPage, empPage]);
 
-  const handleToggleStatus = async (emp: EmployeeDto) => {
-    if (!confirm(`${emp.isActive ? 'Deactivate' : 'Activate'} ${emp.fullName}?`)) return;
-    try { await attendanceService.toggleEmployeeStatus(emp.id); setEmployees(p => p.map(e => e.id === emp.id ? { ...e, isActive: !e.isActive } : e)); }
-    catch (e: any) { setActionError(e.response?.data?.error || 'Failed'); }
+  const openEdit = (emp: EmployeeDto) => {
+    setEditingEmp(emp);
+    setEditForm({
+      firstName: emp.fullName.split(' ')[0] || '',
+      lastName: emp.fullName.split(' ').slice(1).join(' ') || '',
+      email: emp.email,
+      departmentId: 0,
+      role: emp.role,
+      managerId: 0,
+      isActive: emp.isActive,
+    });
+    setActionError('');
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEmp) return;
+    setActionError('');
+    try {
+      const updated = await attendanceService.updateEmployee(editingEmp.id, {
+        firstName: editForm.firstName || undefined,
+        lastName: editForm.lastName || undefined,
+        email: editForm.email || undefined,
+        departmentId: editForm.departmentId || undefined,
+        role: editForm.role || undefined,
+        managerId: editForm.managerId || undefined,
+        isActive: editForm.isActive,
+      });
+      setEmployees(p => p.map(e => e.id === updated.id ? updated : e));
+      setEditingEmp(null);
+    } catch (err: any) {
+      setActionError(err.response?.data?.error || 'Failed');
+    }
   };
   const handleDelete = async (emp: EmployeeDto) => {
     if (!confirm(`Delete ${emp.fullName} permanently?`)) return;
@@ -93,6 +124,39 @@ export const AdminPage: React.FC = () => {
         document.body
       )}
 
+      {/* Edit Employee Modal */}
+      {editingEmp && createPortal(
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]" onClick={() => setEditingEmp(null)}>
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between mb-4"><h3 className="text-lg font-semibold">Edit Employee</h3><button onClick={() => setEditingEmp(null)}><X className="h-5 w-5 text-gray-400" /></button></div>
+            <form onSubmit={handleSaveEdit} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs font-medium text-gray-600 mb-1">First Name</label><input value={editForm.firstName} onChange={e => setEditForm({ ...editForm, firstName: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none" /></div>
+                <div><label className="block text-xs font-medium text-gray-600 mb-1">Last Name</label><input value={editForm.lastName} onChange={e => setEditForm({ ...editForm, lastName: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none" /></div>
+              </div>
+              <div><label className="block text-xs font-medium text-gray-600 mb-1">Email</label><input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none" /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs font-medium text-gray-600 mb-1">Department</label><select value={editForm.departmentId} onChange={e => setEditForm({ ...editForm, departmentId: Number(e.target.value) })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"><option value={0}>— Unchanged —</option><option value={1}>Engineering</option><option value={2}>HR</option><option value={3}>Marketing</option><option value={4}>Finance</option><option value={5}>Operations</option></select></div>
+                <div><label className="block text-xs font-medium text-gray-600 mb-1">Role</label><select value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value, managerId: 0 })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"><option>Employee</option><option>Manager</option><option>Admin</option></select></div>
+              </div>
+              {(editForm.role === 'Employee' || editForm.role === 'Manager') && (
+                <div><label className="block text-xs font-medium text-gray-600 mb-1">Manager</label><select value={editForm.managerId} onChange={e => setEditForm({ ...editForm, managerId: Number(e.target.value) })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"><option value={0}>— Unchanged —</option>{employees.filter(e => e.role === 'Manager' || e.role === 'Admin').map(m => (<option key={m.id} value={m.id}>{m.fullName} ({m.role})</option>))}</select></div>
+              )}
+              <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                <span className="text-sm font-medium text-gray-700">Status</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={editForm.isActive} onChange={e => setEditForm({ ...editForm, isActive: e.target.checked })} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                  <span className={`ml-3 text-sm font-medium ${editForm.isActive ? 'text-green-700' : 'text-red-700'}`}>{editForm.isActive ? 'Active' : 'Inactive'}</span>
+                </label>
+              </div>
+              <button type="submit" className="w-full flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 rounded-lg"><Pencil className="h-4 w-4" />Save Changes</button>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* Tabs */}
       <div className="flex gap-2">
         {([{ key: 'employees' as const, label: 'Employees', icon: Users }, { key: 'audit' as const, label: 'Audit Log', icon: FileText }]).map(t => (
@@ -114,7 +178,7 @@ export const AdminPage: React.FC = () => {
               <td className="px-4 py-3 text-xs text-gray-500">{emp.managerName || '—'}</td>
               <td className="px-4 py-3"><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${emp.isActive?'bg-green-100 text-green-800':'bg-red-100 text-red-800'}`}>{emp.isActive?'Active':'Inactive'}</span></td>
               <td className="px-4 py-3"><div className="flex items-center gap-1.5">
-                <button onClick={() => handleToggleStatus(emp)} title={emp.isActive?'Deactivate':'Activate'} className={`p-1.5 rounded-lg ${emp.isActive?'text-orange-600 hover:bg-orange-50':'text-green-600 hover:bg-green-50'}`}><ToggleLeft className="h-4 w-4" /></button>
+                <button onClick={() => openEdit(emp)} title="Edit" className="p-1.5 rounded-lg text-primary-600 hover:bg-primary-50"><Pencil className="h-4 w-4" /></button>
                 {resetPwdId === emp.id ? (
                   <InlineReset onReset={p => handleResetPassword(emp.id, p)} onCancel={() => setResetPwdId(null)} />
                 ) : (<button onClick={() => setResetPwdId(emp.id)} title="Reset Password" className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50"><Key className="h-4 w-4" /></button>)}
