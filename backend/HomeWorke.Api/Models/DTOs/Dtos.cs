@@ -78,7 +78,8 @@ public record EmployeeDto(
     bool IsActive,
     DateTime? LastLoginAt,
     int? ManagerId = null,
-    string? ManagerName = null
+    string? ManagerName = null,
+    int? DepartmentId = null
 );
 
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
@@ -107,7 +108,11 @@ public record AdminUpdateEmployeeRequest(
     string? Role,
     int? ManagerId,
     bool? IsActive
-);
+)
+{
+    // Explicit parameterless constructor for JSON deserialization
+    public AdminUpdateEmployeeRequest() : this(null, null, null, null, null, null, null) { }
+}
 
 public record ErrorResponse(string Message, string? Detail = null);
 

@@ -61,7 +61,8 @@ public class AdminController : ControllerBase
                 e.IsActive,
                 e.LastLoginAt,
                 e.ManagerId,
-                e.Manager != null ? e.Manager.FullName : null
+                e.Manager != null ? e.Manager.FullName : null,
+                e.DepartmentId
             ))
             .ToListAsync();
 
@@ -195,7 +196,7 @@ public class AdminController : ControllerBase
         return Ok(new EmployeeDto(
             employee.Id, employee.EmployeeCode, employee.FullName, employee.Email,
             employee.Department?.Name ?? "—", employee.Role.ToString(), employee.IsActive,
-            employee.LastLoginAt, employee.ManagerId, employee.Manager?.FullName
+            employee.LastLoginAt, employee.ManagerId, employee.Manager?.FullName, employee.DepartmentId
         ));
     }
 
@@ -265,7 +266,8 @@ public class AdminController : ControllerBase
             employee.Id, employee.EmployeeCode, employee.FullName, employee.Email,
             employee.Department?.Name ?? "—", employee.Role.ToString(), employee.IsActive, employee.LastLoginAt,
             employee.ManagerId,
-            employee.Manager?.FullName
+            employee.Manager?.FullName,
+            employee.DepartmentId
         ));
     }
 

@@ -98,8 +98,9 @@ export interface EmployeeDto {
   role: string;
   isActive: boolean;
   lastLoginAt: string | null;
-  managerId: number | null;
-  managerName: string | null;
+  managerId?: number | null;
+  managerName?: string | null;
+  departmentId?: number | null;
 }
 
 // ── Reports: Current Status & History ───────────

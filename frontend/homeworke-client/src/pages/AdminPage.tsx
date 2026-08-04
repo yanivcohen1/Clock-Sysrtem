@@ -42,9 +42,9 @@ export const AdminPage: React.FC = () => {
       firstName: emp.fullName.split(' ')[0] || '',
       lastName: emp.fullName.split(' ').slice(1).join(' ') || '',
       email: emp.email,
-      departmentId: 0,
+      departmentId: emp.departmentId ?? 0,
       role: emp.role,
-      managerId: 0,
+      managerId: emp.managerId ?? 0,
       isActive: emp.isActive,
     });
     setActionError('');
